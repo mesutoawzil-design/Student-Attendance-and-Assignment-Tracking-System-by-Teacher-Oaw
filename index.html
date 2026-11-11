@@ -28,7 +28,7 @@
         </div>
         <div>
           <h1 id="site-title-display" class="text-lg sm:text-xl font-bold text-slate-900 leading-tight">ระบบเช็กชื่อและเช็กงานนักเรียน</h1>
-          <p id="site-subtitle-display" class="text-xs sm:text-sm text-slate-500">โรงเรียนตัวอย่างวิทยา • ระบบจัดการเรียนการสอน</p>
+          <p id="site-subtitle-display" class="text-xs sm:text-sm text-slate-500">โรงเรียนโกสัมพีวิทยา สพม.กำแพงเพชร</p>
         </div>
       </div>
 
@@ -66,7 +66,7 @@
       <div class="space-y-1">
         <div class="flex flex-wrap items-center gap-2">
           <span id="info-class-name" class="px-2.5 py-0.5 rounded-md bg-blue-100 text-blue-800 font-bold text-sm">ม.1/1</span>
-          <span id="info-subject" class="font-bold text-slate-800 text-base">ว21101 วิทยาศาสตร์พื้นฐาน</span>
+          <span id="info-subject" class="font-bold text-slate-800 text-base">พ21101 สุขศึกษาและพลศึกษา</span>
           <span id="info-term" class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600">ภาคเรียนที่ 1/2569</span>
         </div>
         <div class="text-xs sm:text-sm text-slate-600 flex flex-wrap gap-x-4 gap-y-1">
@@ -165,6 +165,15 @@
               ✅ มาเรียนทั้งหมด
             </button>
           </div>
+        </div>
+
+        <!-- Quick Add Student Bar -->
+        <div class="teacher-only hidden pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2">
+          <span class="text-xs font-bold text-slate-600">➕ เพิ่มนักเรียนด่วน:</span>
+          <input type="number" id="quick-att-no" placeholder="เลขที่" class="px-2 py-1 rounded border border-slate-300 text-xs w-16">
+          <input type="text" id="quick-att-id" placeholder="รหัสประจำตัว" class="px-2 py-1 rounded border border-slate-300 text-xs w-24">
+          <input type="text" id="quick-att-name" placeholder="ชื่อ-สกุล นักเรียน" class="px-2 py-1 rounded border border-slate-300 text-xs w-48">
+          <button data-action="quick-add-student" class="px-3 py-1 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700">เพิ่มรายชื่อ</button>
         </div>
 
         <!-- Auto Schedule Pills -->
@@ -330,10 +339,10 @@
 
       <div class="border-t border-slate-200 pt-3 space-y-2">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <label class="text-xs font-bold text-slate-700">วางรายชื่อนักเรียน (รูปแบบ: รหัสประจำตัว  ชื่อ-สกุล  เลขที่)</label>
+          <label class="text-xs font-bold text-slate-700">วางรายชื่อนักเรียน (รองรับการก๊อปปี้จาก Word/Excel โดยตรง)</label>
           <button data-action="paste-sample-students" class="text-xs text-blue-600 hover:underline font-medium">วางตัวอย่าง</button>
         </div>
-        <textarea id="cls-bulk-text" rows="5" placeholder="66001&#9;เด็กชายกิตติพงษ์ ใจดี&#9;1&#10;66002&#9;เด็กหญิงมานี มีตา&#9;2" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono"></textarea>
+        <textarea id="cls-bulk-text" rows="5" placeholder="วางข้อมูลจาก Word หรือ Excel ที่นี่ได้เลย..." class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono"></textarea>
         <div class="flex flex-wrap gap-2">
           <button data-action="parse-bulk-students" class="px-3 py-1 rounded bg-slate-800 text-white text-xs font-semibold hover:bg-slate-700">🔄 แปลงรายชื่อ</button>
           <button data-action="sort-modal-students" data-by="no" class="px-3 py-1 rounded bg-slate-100 text-slate-700 text-xs border border-slate-300 hover:bg-slate-200">เรียงตามเลขที่</button>
@@ -406,7 +415,7 @@
         const today = new Date().toISOString().split('T')[0];
         return {
           siteTitle: 'ระบบเช็กชื่อและเช็กงานนักเรียน',
-          siteSubtitle: 'โรงเรียนตัวอย่างวิทยา • ระบบจัดการเรียนการสอน',
+          siteSubtitle: 'โรงเรียนโกสัมพีวิทยา สพม.กำแพงเพชร',
           activeClassId: 'c1',
           selectedDate: today,
           classes: [
@@ -483,6 +492,30 @@
         return state.classes.find(c => c.id === state.activeClassId) || state.classes[0];
       }
 
+      function parseBulkText() {
+        const text = document.getElementById('cls-bulk-text').value;
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        return lines.map((line, idx) => {
+          const parts = line.split(/\t|,|\s+/).map(p => p.trim()).filter(Boolean);
+          if (parts.length >= 3) {
+            const lastPart = parts[parts.length - 1];
+            if (!isNaN(lastPart) && parts.length > 3) {
+              const id = parts[0];
+              const name = parts.slice(1, parts.length - 1).join(' ');
+              const no = parseInt(lastPart) || (idx + 1);
+              return { id, name, no };
+            }
+            return { id: parts[0], name: parts.slice(1, parts.length - 1).join(' '), no: parseInt(parts[parts.length - 1]) || (idx + 1) };
+          } else if (parts.length === 3) {
+            return { id: parts[0], name: parts[1], no: parseInt(parts[2]) || (idx + 1) };
+          } else if (parts.length === 2) {
+            return { id: parts[0], name: parts[1], no: idx + 1 };
+          } else {
+            return { id: String(idx + 1).padStart(3, '0'), name: line, no: idx + 1 };
+          }
+        });
+      }
+
       function renderAll() {
         document.title = state.siteTitle;
         document.getElementById('site-title-display').textContent = state.siteTitle;
@@ -511,6 +544,7 @@
 
         const cls = getActiveClass();
         if (!cls) return;
+        if (!cls.students) cls.students = [];
 
         document.getElementById('info-class-name').textContent = cls.name;
         document.getElementById('info-subject').textContent = `${cls.code || ''} ${cls.subject || ''}`.trim();
@@ -684,6 +718,7 @@
           } else {
             document.getElementById('auth-password-input').value = '';
             document.getElementById('modal-auth').classList.replace('hidden', 'flex');
+            setTimeout(() => document.getElementById('auth-password-input').focus(), 100);
           }
         } else if (action === 'submit-auth') {
           const pass = document.getElementById('auth-password-input').value;
@@ -729,8 +764,8 @@
             document.getElementById('cls-credits').value = cls.credits || '';
             document.getElementById('cls-hours').value = cls.hours || '';
             document.getElementById('cls-term').value = cls.term || '';
-            tempModalStudents = [...cls.students];
-            document.getElementById('cls-bulk-text').value = cls.students.map(s => `${s.id}\t${s.name}\t${s.no}`).join('\n');
+            tempModalStudents = [...(cls.students || [])];
+            document.getElementById('cls-bulk-text').value = tempModalStudents.map(s => `${s.id}\t${s.name}\t${s.no}`).join('\n');
           } else {
             document.getElementById('modal-class-title').textContent = 'เพิ่มห้องเรียนใหม่';
             ['cls-name', 'cls-teacher', 'cls-code', 'cls-subject', 'cls-credits', 'cls-hours', 'cls-term', 'cls-bulk-text'].forEach(id => document.getElementById(id).value = '');
@@ -740,22 +775,26 @@
           document.getElementById('modal-class').classList.replace('hidden', 'flex');
         } else if (action === 'paste-sample-students') {
           document.getElementById('cls-bulk-text').value = "66001\tเด็กชายกิตติพงษ์ ใจดี\t1\n66002\tเด็กหญิงมานี มีตา\t2\n66003\tเด็กชายสมชาย รักเรียน\t3";
+          tempModalStudents = parseBulkText();
+          renderModalStudentsPreview();
         } else if (action === 'parse-bulk-students') {
-          const lines = document.getElementById('cls-bulk-text').value.split('\n').map(l => l.trim()).filter(Boolean);
-          tempModalStudents = lines.map((line, idx) => {
-            const parts = line.split(/\t|,|\s{2,}/).map(p => p.trim()).filter(Boolean);
-            if (parts.length >= 3) return { id: parts[0], name: parts[1], no: parseInt(parts[2]) || (idx + 1) };
-            if (parts.length === 2) return { id: parts[0], name: parts[1], no: idx + 1 };
-            return { id: String(idx + 1).padStart(3, '0'), name: parts[0], no: idx + 1 };
-          });
+          tempModalStudents = parseBulkText();
           renderModalStudentsPreview();
         } else if (action === 'sort-modal-students') {
           const by = btn.dataset.by;
+          if (document.getElementById('cls-bulk-text').value.trim()) {
+            tempModalStudents = parseBulkText();
+          }
           tempModalStudents.sort((a, b) => by === 'no' ? a.no - b.no : a.id.localeCompare(b.id));
           renderModalStudentsPreview();
         } else if (action === 'save-class') {
           const name = document.getElementById('cls-name').value.trim();
           if (!name) return alert('กรุณากรอกชื่อห้องเรียน');
+          
+          if (document.getElementById('cls-bulk-text').value.trim()) {
+            tempModalStudents = parseBulkText();
+          }
+
           if (modalMode === 'edit' && cls) {
             cls.name = name;
             cls.teacher = document.getElementById('cls-teacher').value.trim();
@@ -827,6 +866,7 @@
           const title = document.getElementById('new-work-title').value.trim();
           const maxScore = parseInt(document.getElementById('new-work-max').value) || 10;
           if (!title) return alert('กรุณากรอกชื่องาน');
+          if (!cls.assignments) cls.assignments = [];
           cls.assignments.push({ id: 'w_' + Date.now(), title, maxScore });
           document.getElementById('new-work-title').value = '';
           saveState();
@@ -835,14 +875,25 @@
           cls.assignments = cls.assignments.filter(w => w.id !== btn.dataset.wid);
           saveState();
           renderAll();
-        } else if (action === 'add-student') {
-          const no = parseInt(document.getElementById('add-stu-no').value) || (cls.students.length + 1);
-          const id = document.getElementById('add-stu-id').value.trim() || String(no).padStart(3, '0');
-          const name = document.getElementById('add-stu-name').value.trim();
-          if (!name) return alert('กรุณากรอกชื่อ-สกุล');
+        } else if (action === 'add-student' || action === 'quick-add-student') {
+          if (!cls.students) cls.students = [];
+          const isQuick = action === 'quick-add-student';
+          const noInput = isQuick ? document.getElementById('quick-att-no') : document.getElementById('add-stu-no');
+          const idInput = isQuick ? document.getElementById('quick-att-id') : document.getElementById('add-stu-id');
+          const nameInput = isQuick ? document.getElementById('quick-att-name') : document.getElementById('add-stu-name');
+
+          const no = parseInt(noInput.value) || (cls.students.length + 1);
+          const id = idInput.value.trim() || String(no).padStart(3, '0');
+          const name = nameInput.value.trim();
+
+          if (!name) return alert('กรุณากรอกชื่อ-สกุลนักเรียน');
           cls.students.push({ id, name, no });
           cls.students.sort((a, b) => a.no - b.no);
-          ['add-stu-no', 'add-stu-id', 'add-stu-name'].forEach(i => document.getElementById(i).value = '');
+
+          noInput.value = '';
+          idInput.value = '';
+          nameInput.value = '';
+
           saveState();
           renderAll();
         } else if (action === 'delete-student') {
