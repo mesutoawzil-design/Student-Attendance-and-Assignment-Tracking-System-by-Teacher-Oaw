@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบเช็กชื่อและเช็กงานนักเรียน</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    @media print {
+      body { background: #fff !important; color: #000 !important; }
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      .print-break { page-break-inside: avoid; }
+    }
+    .print-only { display: none; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+  <!-- Top Navbar -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 no-print shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+          📋
+        </div>
+        <div>
+          <h1 id="site-title-display" class="text-lg sm:text-xl font-bold text-slate-900 leading-tight">ระบบเช็กชื่อและเช็กงานนักเรียน</h1>
+          <p id="site-subtitle-display" class="text-xs sm:text-sm text-slate-500">โรงเรียนตัวอย่างวิทยา • ระบบจัดการเรียนการสอน</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <span id="sync-status" class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+          💾 ออฟไลน์ (Local)
+        </span>
+        <span id="mode-badge" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+          โหมด: นักเรียน (ดูอย่างเดียว)
+        </span>
+        <button data-action="toggle-auth" id="btn-auth" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-slate-800 text-white hover:bg-slate-700 transition">
+          🔐 เข้าสู่โหมดครูผู้สอน
+        </button>
+        <button data-action="open-site-settings" class="teacher-only hidden px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300 transition">
+          ⚙️ ตั้งค่าเว็บไซต์
+        </button>
+      </div>
+    </div>
+
+    <!-- Classroom Selector Bar -->
+    <div class="bg-slate-100 border-t border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-wrap items-center justify-between gap-2">
+        <div id="classroom-tabs" class="flex flex-wrap items-center gap-1.5"></div>
+        <button data-action="open-class-modal" data-mode="add" class="teacher-only hidden px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm">
+          + เพิ่มห้องเรียน
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Subject Info Banner -->
+    <div id="subject-banner" class="bg-white rounded-xl border border-slate-200 p-4 mb-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+      <div class="space-y-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <span id="info-class-name" class="px-2.5 py-0.5 rounded-md bg-blue-100 text-blue-800 font-bold text-sm">ม.1/1</span>
+          <span id="info-subject" class="font-bold text-slate-800 text-base">ว21101 วิทยาศาสตร์พื้นฐาน</span>
+          <span id="info-term" class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600">ภาคเรียนที่ 1/2569</span>
+        </div>
+        <div class="text-xs sm:text-sm text-slate-600 flex flex-wrap gap-x-4 gap-y-1">
+          <span>👨‍🏫 ครูผู้สอน: <strong id="info-teacher" class="text-slate-800">-</strong></span>
+          <span>📘 หน่วยกิต: <strong id="info-credits" class="text-slate-800">-</strong></span>
+          <span>⏱️ จำนวนชั่วโมง: <strong id="info-hours" class="text-slate-800">-</strong></span>
+          <span>👥 นักเรียน: <strong id="info-count" class="text-slate-800">0</strong> คน</span>
+        </div>
+      </div>
+      <div class="teacher-only hidden flex gap-2 no-print">
+        <button data-action="open-class-modal" data-mode="edit" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300">
+          ✏️ แก้ไขข้อมูลห้อง/วิชา
+        </button>
+        <button data-action="delete-class" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 hover:bg-red-100 text-red-600 border border-red-200">
+          🗑️ ลบห้องนี้
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Navigation Tabs -->
+    <div class="flex flex-wrap gap-2 mb-5 no-print border-b border-slate-200 pb-3">
+      <button data-action="switch-tab" data-tab="summary" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition bg-blue-600 text-white">📊 สรุปผลและส่งออก</button>
+      <button data-action="switch-tab" data-tab="attendance" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">✅ เช็กชื่อเข้าเรียน</button>
+      <button data-action="switch-tab" data-tab="assignments" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">📝 เช็กงานและคะแนน</button>
+      <button data-action="switch-tab" data-tab="students" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">👥 จัดการนักเรียน</button>
+    </div>
+
+    <!-- TAB 1: SUMMARY -->
+    <section id="tab-summary" class="tab-panel space-y-5">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 no-print">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div class="text-xs text-slate-500">จำนวนนักเรียน</div>
+          <div id="stat-total-students" class="text-2xl font-bold text-slate-800 mt-1">0</div>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div class="text-xs text-slate-500">วันที่เช็กชื่อทั้งหมด</div>
+          <div id="stat-total-days" class="text-2xl font-bold text-blue-600 mt-1">0</div>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div class="text-xs text-slate-500">จำนวนชิ้นงาน</div>
+          <div id="stat-total-works" class="text-2xl font-bold text-emerald-600 mt-1">0</div>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div class="text-xs text-slate-500">คะแนนเต็มรวม</div>
+          <div id="stat-total-maxscore" class="text-2xl font-bold text-purple-600 mt-1">0</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 no-print">
+          <h2 class="font-bold text-slate-800">ตารางสรุปผลการเรียนรายบุคคล</h2>
+          <div class="flex flex-wrap gap-2">
+            <button data-action="export-csv" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition">
+              📥 ส่งออก CSV (Excel)
+            </button>
+            <button data-action="print-pdf" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-slate-800 text-white hover:bg-slate-700 transition">
+              🖨️ พิมพ์ / บันทึก PDF
+            </button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-slate-50 text-slate-700 border-b border-slate-200">
+              <tr>
+                <th class="px-3 py-3 text-center w-14">เลขที่</th>
+                <th class="px-3 py-3">รหัส</th>
+                <th class="px-3 py-3">ชื่อ-สกุล</th>
+                <th class="px-3 py-3 text-center text-emerald-700">มา</th>
+                <th class="px-3 py-3 text-center text-amber-600">สาย</th>
+                <th class="px-3 py-3 text-center text-blue-600">ลา</th>
+                <th class="px-3 py-3 text-center text-red-600">ขาด</th>
+                <th class="px-3 py-3 text-center">% เข้าเรียน</th>
+                <th class="px-3 py-3 text-center">ส่งงาน</th>
+                <th class="px-3 py-3 text-center">คะแนนรวม</th>
+              </tr>
+            </thead>
+            <tbody id="summary-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: ATTENDANCE -->
+    <section id="tab-attendance" class="tab-panel hidden space-y-4">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="text-sm font-semibold text-slate-700">วันที่เช็กชื่อ:</label>
+            <input type="date" id="attendance-date" class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+          <div class="teacher-only hidden flex flex-wrap gap-2">
+            <button data-action="open-schedule-modal" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100">
+              🗓️ ตั้งค่าวันเรียนอัตโนมัติ
+            </button>
+            <button data-action="mark-all-present" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700">
+              ✅ มาเรียนทั้งหมด
+            </button>
+          </div>
+        </div>
+
+        <!-- Auto Schedule Pills -->
+        <div id="schedule-pills-container" class="hidden pt-2 border-t border-slate-100">
+          <div class="text-xs font-semibold text-slate-500 mb-2">ตารางคาบเรียนอัตโนมัติ (คลิกเพื่อเลือกวันเช็กชื่อ):</div>
+          <div id="schedule-pills" class="flex flex-wrap gap-1.5"></div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-slate-50 text-slate-700 border-b border-slate-200">
+              <tr>
+                <th class="px-3 py-3 text-center w-14">เลขที่</th>
+                <th class="px-3 py-3">รหัส</th>
+                <th class="px-3 py-3">ชื่อ-สกุล</th>
+                <th class="px-3 py-3">สถานะการเข้าเรียน</th>
+                <th class="px-3 py-3">หมายเหตุ</th>
+              </tr>
+            </thead>
+            <tbody id="attendance-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: ASSIGNMENTS -->
+    <section id="tab-assignments" class="tab-panel hidden space-y-4">
+      <div class="teacher-only hidden bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-end gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่องาน / กิจกรรม</label>
+          <input type="text" id="new-work-title" placeholder="เช่น ใบงานที่ 1" class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm w-48 sm:w-64">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">คะแนนเต็ม</label>
+          <input type="number" id="new-work-max" value="10" min="1" class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm w-24">
+        </div>
+        <button data-action="add-assignment" class="px-4 py-1.5 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">
+          + เพิ่มหัวข้องาน
+        </button>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead id="assignments-thead" class="bg-slate-50 text-slate-700 border-b border-slate-200"></thead>
+            <tbody id="assignments-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: STUDENTS -->
+    <section id="tab-students" class="tab-panel hidden space-y-4">
+      <div class="teacher-only hidden bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-end justify-between gap-3">
+        <div class="flex flex-wrap items-end gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">เลขที่</label>
+            <input type="number" id="add-stu-no" placeholder="1" class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm w-20">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสประจำตัว</label>
+            <input type="text" id="add-stu-id" placeholder="66001" class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm w-28">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อ-สกุล</label>
+            <input type="text" id="add-stu-name" placeholder="เด็กชายสมชาย ใจดี" class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm w-52">
+          </div>
+          <button data-action="add-student" class="px-4 py-1.5 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">
+            + เพิ่มนักเรียน
+          </button>
+        </div>
+        <button data-action="open-class-modal" data-mode="edit" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100">
+          📋 วางรายชื่อแบบกลุ่ม (Copy & Paste)
+        </button>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-slate-50 text-slate-700 border-b border-slate-200">
+              <tr>
+                <th class="px-3 py-3 text-center w-16">เลขที่</th>
+                <th class="px-3 py-3">รหัสประจำตัว</th>
+                <th class="px-3 py-3">ชื่อ-สกุล</th>
+                <th class="px-3 py-3 text-right teacher-only hidden">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="students-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL: Auth (Teacher Login) -->
+  <div id="modal-auth" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4">
+      <h3 class="text-lg font-bold text-slate-900">🔐 เข้าสู่โหมดครูผู้สอน</h3>
+      <p class="text-xs text-slate-500">กรุณากรอกรหัสผ่านเพื่อปลดล็อกสิทธิ์การแก้ไขข้อมูล</p>
+      <input type="password" id="auth-password-input" placeholder="กรอกรหัสผ่าน..." class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+      <div class="flex justify-end gap-2">
+        <button data-action="close-modal" data-target="modal-auth" class="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100">ยกเลิก</button>
+        <button data-action="submit-auth" class="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">ยืนยัน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Site Settings -->
+  <div id="modal-site-settings" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+      <h3 class="text-lg font-bold text-slate-900">⚙️ ตั้งค่าเว็บไซต์</h3>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อเว็บไซต์หลัก</label>
+        <input type="text" id="input-site-title" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อโรงเรียน / คำอธิบายรอง</label>
+        <input type="text" id="input-site-subtitle" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm">
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button data-action="close-modal" data-target="modal-site-settings" class="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100">ยกเลิก</button>
+        <button data-action="save-site-settings" class="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">บันทึก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Class & Bulk Students -->
+  <div id="modal-class" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl space-y-4 my-8">
+      <h3 id="modal-class-title" class="text-lg font-bold text-slate-900">จัดการห้องเรียนและรายวิชา</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อห้องเรียน *</label>
+          <input type="text" id="cls-name" placeholder="เช่น ม.1/1" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">ครูผู้สอน</label>
+          <input type="text" id="cls-teacher" placeholder="เช่น ครูเอ๊ว" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสวิชา</label>
+          <input type="text" id="cls-code" placeholder="เช่น พ21101" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อรายวิชา</label>
+          <input type="text" id="cls-subject" placeholder="เช่น สุขศึกษาและพลศึกษา" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">หน่วยกิต</label>
+          <input type="text" id="cls-credits" placeholder="เช่น 1.0" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">จำนวนชั่วโมงเรียน</label>
+          <input type="text" id="cls-hours" placeholder="เช่น 40 ชั่วโมง" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-sm">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">ภาคเรียน / ปีการศึกษา</label>
+          <input type="text" id="cls-term" placeholder="เช่น ภาคเรียนที่ 1/2569" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-sm">
+        </div>
+      </div>
+
+      <div class="border-t border-slate-200 pt-3 space-y-2">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <label class="text-xs font-bold text-slate-700">วางรายชื่อนักเรียน (รูปแบบ: รหัสประจำตัว  ชื่อ-สกุล  เลขที่)</label>
+          <button data-action="paste-sample-students" class="text-xs text-blue-600 hover:underline font-medium">วางตัวอย่าง</button>
+        </div>
+        <textarea id="cls-bulk-text" rows="5" placeholder="66001&#9;เด็กชายกิตติพงษ์ ใจดี&#9;1&#10;66002&#9;เด็กหญิงมานี มีตา&#9;2" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono"></textarea>
+        <div class="flex flex-wrap gap-2">
+          <button data-action="parse-bulk-students" class="px-3 py-1 rounded bg-slate-800 text-white text-xs font-semibold hover:bg-slate-700">🔄 แปลงรายชื่อ</button>
+          <button data-action="sort-modal-students" data-by="no" class="px-3 py-1 rounded bg-slate-100 text-slate-700 text-xs border border-slate-300 hover:bg-slate-200">เรียงตามเลขที่</button>
+          <button data-action="sort-modal-students" data-by="id" class="px-3 py-1 rounded bg-slate-100 text-slate-700 text-xs border border-slate-300 hover:bg-slate-200">เรียงตามรหัส</button>
+        </div>
+        <div id="modal-students-preview" class="text-xs text-slate-600 max-h-32 overflow-y-auto bg-slate-50 p-2 rounded border border-slate-200"></div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button data-action="close-modal" data-target="modal-class" class="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100">ยกเลิก</button>
+        <button data-action="save-class" class="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">บันทึกข้อมูลห้อง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Auto Schedule -->
+  <div id="modal-schedule" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+      <h3 class="text-lg font-bold text-slate-900">🗓️ ตั้งค่าวันเรียนอัตโนมัติ</h3>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-2">เลือกวันเรียนประจำสัปดาห์</label>
+        <div class="flex flex-wrap gap-2">
+          <label class="flex items-center gap-1 text-xs bg-slate-100 px-2.5 py-1.5 rounded cursor-pointer"><input type="checkbox" class="sched-day" value="1"> จันทร์</label>
+          <label class="flex items-center gap-1 text-xs bg-slate-100 px-2.5 py-1.5 rounded cursor-pointer"><input type="checkbox" class="sched-day" value="2"> อังคาร</label>
+          <label class="flex items-center gap-1 text-xs bg-slate-100 px-2.5 py-1.5 rounded cursor-pointer"><input type="checkbox" class="sched-day" value="3"> พุธ</label>
+          <label class="flex items-center gap-1 text-xs bg-slate-100 px-2.5 py-1.5 rounded cursor-pointer"><input type="checkbox" class="sched-day" value="4"> พฤหัสฯ</label>
+          <label class="flex items-center gap-1 text-xs bg-slate-100 px-2.5 py-1.5 rounded cursor-pointer"><input type="checkbox" class="sched-day" value="5"> ศุกร์</label>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">วันที่เริ่มเรียน</label>
+          <input type="date" id="sched-start" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">จำนวนสัปดาห์</label>
+          <input type="number" id="sched-weeks" value="18" min="1" max="40" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-sm">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button data-action="close-modal" data-target="modal-schedule" class="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100">ยกเลิก</button>
+        <button data-action="generate-schedule" class="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">สร้างตารางวันเรียน</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyAgrqab0b0oXTkh0xc9zbqCvsknIQ1W1EOZWvtGhGu0oMgQXco739tTi4cqx7aoi42xQ/exec';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const STORAGE_KEY = 'student_tracker_v2_data';
+      const TEACHER_PASS = '132533';
+
+      let state = loadLocalState();
+      let isTeacher = false;
+      let activeTab = 'summary';
+      let modalMode = 'add';
+      let tempModalStudents = [];
+      let syncTimeout = null;
+
+      function setSyncStatus(text, type) {
+        const el = document.getElementById('sync-status');
+        el.textContent = text;
+        if (type === 'ok') el.className = 'px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200';
+        else if (type === 'loading') el.className = 'px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200';
+        else el.className = 'px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200';
+      }
+
+      function defaultState() {
+        const today = new Date().toISOString().split('T')[0];
+        return {
+          siteTitle: 'ระบบเช็กชื่อและเช็กงานนักเรียน',
+          siteSubtitle: 'โรงเรียนตัวอย่างวิทยา • ระบบจัดการเรียนการสอน',
+          activeClassId: 'c1',
+          selectedDate: today,
+          classes: [
+            {
+              id: 'c1',
+              name: 'ม.1/1',
+              teacher: 'ครูเอ๊ว',
+              code: 'พ21101',
+              subject: 'สุขศึกษาและพลศึกษา',
+              credits: '1.0',
+              hours: '40 ชั่วโมง',
+              term: 'ภาคเรียนที่ 1/2569',
+              scheduleDates: [],
+              students: [
+                { id: '66001', name: 'เด็กชายกิตติพงษ์ ใจดี', no: 1 },
+                { id: '66002', name: 'เด็กหญิงมานี มีตา', no: 2 },
+                { id: '66003', name: 'เด็กชายสมชาย รักเรียน', no: 3 }
+              ],
+              attendance: {},
+              assignments: [{ id: 'w1', title: 'ใบงานที่ 1', maxScore: 10 }],
+              submissions: {}
+            }
+          ]
+        };
+      }
+
+      function loadLocalState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return defaultState();
+      }
+
+      async function loadCloudState() {
+        if (!GAS_URL || GAS_URL.includes('YOUR_APPS_SCRIPT')) return;
+        setSyncStatus('🔄 กำลังซิงก์...', 'loading');
+        try {
+          const res = await fetch(GAS_URL + '?t=' + Date.now());
+          const json = await res.json();
+          if (json.status === 'ok' && json.data) {
+            state = json.data;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            renderAll();
+            setSyncStatus('☁️ ซิงก์กับ Sheet แล้ว', 'ok');
+          } else if (json.status === 'empty') {
+            saveState();
+          }
+        } catch (err) {
+          setSyncStatus('⚠️ ออฟไลน์ (Local)', 'local');
+        }
+      }
+
+      function saveState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        if (!GAS_URL || GAS_URL.includes('YOUR_APPS_SCRIPT')) return;
+        setSyncStatus('🔄 กำลังบันทึก...', 'loading');
+        clearTimeout(syncTimeout);
+        syncTimeout = setTimeout(async () => {
+          try {
+            await fetch(GAS_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ data: state })
+            });
+            setSyncStatus('☁️ ซิงก์กับ Sheet แล้ว', 'ok');
+          } catch (err) {
+            setSyncStatus('⚠️ ซิงก์ไม่สำเร็จ', 'local');
+          }
+        }, 600);
+      }
+
+      function getActiveClass() {
+        return state.classes.find(c => c.id === state.activeClassId) || state.classes[0];
+      }
+
+      function renderAll() {
+        document.title = state.siteTitle;
+        document.getElementById('site-title-display').textContent = state.siteTitle;
+        document.getElementById('site-subtitle-display').textContent = state.siteSubtitle;
+
+        const badge = document.getElementById('mode-badge');
+        const btnAuth = document.getElementById('btn-auth');
+        document.querySelectorAll('.teacher-only').forEach(el => {
+          el.classList.toggle('hidden', !isTeacher);
+        });
+        if (isTeacher) {
+          badge.textContent = 'โหมด: ครูผู้สอน (แก้ไขได้)';
+          badge.className = 'px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200';
+          btnAuth.textContent = '🔒 ออกจากโหมดครู (ล็อก)';
+        } else {
+          badge.textContent = 'โหมด: นักเรียน (ดูอย่างเดียว)';
+          badge.className = 'px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200';
+          btnAuth.textContent = '🔐 เข้าสู่โหมดครูผู้สอน';
+        }
+
+        const classTabs = document.getElementById('classroom-tabs');
+        classTabs.innerHTML = state.classes.map(c => {
+          const active = c.id === state.activeClassId;
+          return `<button data-action="select-class" data-id="${c.id}" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition ${active ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-300'}">${c.name}</button>`;
+        }).join('');
+
+        const cls = getActiveClass();
+        if (!cls) return;
+
+        document.getElementById('info-class-name').textContent = cls.name;
+        document.getElementById('info-subject').textContent = `${cls.code || ''} ${cls.subject || ''}`.trim();
+        document.getElementById('info-term').textContent = cls.term || '-';
+        document.getElementById('info-teacher').textContent = cls.teacher || '-';
+        document.getElementById('info-credits').textContent = cls.credits || '-';
+        document.getElementById('info-hours').textContent = cls.hours || '-';
+        document.getElementById('info-count').textContent = cls.students.length;
+        document.getElementById('attendance-date').value = state.selectedDate;
+
+        renderSummary(cls);
+        renderAttendance(cls);
+        renderAssignments(cls);
+        renderStudents(cls);
+      }
+
+      function renderSummary(cls) {
+        const days = Object.keys(cls.attendance || {});
+        const maxScoreTotal = (cls.assignments || []).reduce((sum, a) => sum + Number(a.maxScore || 0), 0);
+        document.getElementById('stat-total-students').textContent = cls.students.length;
+        document.getElementById('stat-total-days').textContent = days.length;
+        document.getElementById('stat-total-works').textContent = (cls.assignments || []).length;
+        document.getElementById('stat-total-maxscore').textContent = maxScoreTotal;
+
+        const tbody = document.getElementById('summary-tbody');
+        tbody.innerHTML = cls.students.map(stu => {
+          let present = 0, late = 0, leave = 0, absent = 0;
+          days.forEach(d => {
+            const rec = cls.attendance[d]?.[stu.id]?.status;
+            if (rec === 'present') present++;
+            else if (rec === 'late') late++;
+            else if (rec === 'sick' || rec === 'personal') leave++;
+            else if (rec === 'absent') absent++;
+          });
+          const totalChecked = present + late + leave + absent;
+          const pct = totalChecked > 0 ? Math.round(((present + late) / totalChecked) * 100) : 0;
+
+          let submitted = 0, scoreSum = 0;
+          (cls.assignments || []).forEach(a => {
+            const sub = cls.submissions?.[a.id]?.[stu.id];
+            if (sub && (sub.status === 'submitted' || sub.status === 'late')) submitted++;
+            if (sub && sub.score !== undefined && sub.score !== '') scoreSum += Number(sub.score);
+          });
+
+          return `
+            <tr class="hover:bg-slate-50">
+              <td class="px-3 py-2.5 text-center font-medium">${stu.no}</td>
+              <td class="px-3 py-2.5 text-slate-600">${stu.id}</td>
+              <td class="px-3 py-2.5 font-medium text-slate-800">${stu.name}</td>
+              <td class="px-3 py-2.5 text-center text-emerald-600 font-semibold">${present}</td>
+              <td class="px-3 py-2.5 text-center text-amber-600 font-semibold">${late}</td>
+              <td class="px-3 py-2.5 text-center text-blue-600 font-semibold">${leave}</td>
+              <td class="px-3 py-2.5 text-center text-red-600 font-semibold">${absent}</td>
+              <td class="px-3 py-2.5 text-center font-bold">${pct}%</td>
+              <td class="px-3 py-2.5 text-center">${submitted}/${(cls.assignments || []).length}</td>
+              <td class="px-3 py-2.5 text-center font-bold text-blue-700">${scoreSum}/${maxScoreTotal}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      function renderAttendance(cls) {
+        const pillsCont = document.getElementById('schedule-pills-container');
+        const pills = document.getElementById('schedule-pills');
+        if (cls.scheduleDates && cls.scheduleDates.length > 0) {
+          pillsCont.classList.remove('hidden');
+          pills.innerHTML = cls.scheduleDates.map((d, idx) => {
+            const active = d === state.selectedDate;
+            const checked = cls.attendance[d] && Object.keys(cls.attendance[d]).length > 0;
+            return `<button data-action="select-sched-date" data-date="${d}" class="px-2.5 py-1 rounded-md text-xs font-medium border transition ${active ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}">คาบ ${idx + 1} (${d}) ${checked ? '✓' : ''}</button>`;
+          }).join('');
+        } else {
+          pillsCont.classList.add('hidden');
+        }
+
+        const dateData = cls.attendance[state.selectedDate] || {};
+        const tbody = document.getElementById('attendance-tbody');
+        tbody.innerHTML = cls.students.map(stu => {
+          const rec = dateData[stu.id] || { status: '', note: '' };
+          const disabled = isTeacher ? '' : 'disabled';
+          return `
+            <tr class="hover:bg-slate-50">
+              <td class="px-3 py-2.5 text-center font-medium">${stu.no}</td>
+              <td class="px-3 py-2.5 text-slate-600">${stu.id}</td>
+              <td class="px-3 py-2.5 font-medium">${stu.name}</td>
+              <td class="px-3 py-2.5">
+                <select data-action="change-att-status" data-stuid="${stu.id}" ${disabled} class="px-2.5 py-1 rounded border border-slate-300 text-xs bg-white disabled:bg-slate-100">
+                  <option value="" ${rec.status === '' ? 'selected' : ''}>-- เลือก --</option>
+                  <option value="present" ${rec.status === 'present' ? 'selected' : ''}>✅ มาเรียน</option>
+                  <option value="late" ${rec.status === 'late' ? 'selected' : ''}>⏰ มาสาย</option>
+                  <option value="sick" ${rec.status === 'sick' ? 'selected' : ''}>🤒 ลาป่วย</option>
+                  <option value="personal" ${rec.status === 'personal' ? 'selected' : ''}>📝 ลากิจ</option>
+                  <option value="absent" ${rec.status === 'absent' ? 'selected' : ''}>❌ ขาดเรียน</option>
+                </select>
+              </td>
+              <td class="px-3 py-2.5">
+                <input type="text" data-action="change-att-note" data-stuid="${stu.id}" value="${rec.note || ''}" ${disabled} placeholder="หมายเหตุ..." class="px-2 py-1 rounded border border-slate-300 text-xs w-full max-w-xs disabled:bg-slate-100">
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      function renderAssignments(cls) {
+        const works = cls.assignments || [];
+        const thead = document.getElementById('assignments-thead');
+        thead.innerHTML = `
+          <tr>
+            <th class="px-3 py-3 text-center w-14">เลขที่</th>
+            <th class="px-3 py-3">ชื่อ-สกุล</th>
+            ${works.map(w => `
+              <th class="px-3 py-3 text-center min-w-[140px]">
+                <div class="font-bold">${w.title}</div>
+                <div class="text-xs font-normal text-slate-500">เต็ม ${w.maxScore} คะแนน
+                  ${isTeacher ? `<button data-action="delete-assignment" data-wid="${w.id}" class="text-red-500 hover:underline ml-1">ลบ</button>` : ''}
+                </div>
+              </th>
+            `).join('')}
+          </tr>
+        `;
+
+        const tbody = document.getElementById('assignments-tbody');
+        const disabled = isTeacher ? '' : 'disabled';
+        tbody.innerHTML = cls.students.map(stu => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-3 py-2.5 text-center font-medium">${stu.no}</td>
+            <td class="px-3 py-2.5 font-medium">${stu.name}</td>
+            ${works.map(w => {
+              const sub = cls.submissions?.[w.id]?.[stu.id] || { status: 'missing', score: '' };
+              return `
+                <td class="px-3 py-2.5 text-center">
+                  <div class="flex flex-col items-center gap-1">
+                    <select data-action="change-work-status" data-wid="${w.id}" data-stuid="${stu.id}" ${disabled} class="px-2 py-1 rounded border border-slate-300 text-xs bg-white disabled:bg-slate-100">
+                      <option value="missing" ${sub.status === 'missing' ? 'selected' : ''}>⏳ ยังไม่ส่ง</option>
+                      <option value="submitted" ${sub.status === 'submitted' ? 'selected' : ''}>✅ ส่งแล้ว</option>
+                      <option value="late" ${sub.status === 'late' ? 'selected' : ''}>⏰ ส่งช้า</option>
+                    </select>
+                    <input type="number" data-action="change-work-score" data-wid="${w.id}" data-stuid="${stu.id}" value="${sub.score}" max="${w.maxScore}" min="0" ${disabled} placeholder="คะแนน" class="px-2 py-1 rounded border border-slate-300 text-xs w-20 text-center disabled:bg-slate-100">
+                  </div>
+                </td>
+              `;
+            }).join('')}
+          </tr>
+        `).join('');
+      }
+
+      function renderStudents(cls) {
+        const tbody = document.getElementById('students-tbody');
+        tbody.innerHTML = cls.students.map(stu => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-3 py-2.5 text-center font-medium">${stu.no}</td>
+            <td class="px-3 py-2.5 text-slate-600">${stu.id}</td>
+            <td class="px-3 py-2.5 font-medium">${stu.name}</td>
+            <td class="px-3 py-2.5 text-right ${isTeacher ? '' : 'hidden'}">
+              <button data-action="delete-student" data-stuid="${stu.id}" class="text-xs text-red-600 hover:underline">ลบ</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const cls = getActiveClass();
+
+        if (action === 'toggle-auth') {
+          if (isTeacher) {
+            isTeacher = false;
+            renderAll();
+          } else {
+            document.getElementById('auth-password-input').value = '';
+            document.getElementById('modal-auth').classList.replace('hidden', 'flex');
+          }
+        } else if (action === 'submit-auth') {
+          const pass = document.getElementById('auth-password-input').value;
+          if (pass === TEACHER_PASS) {
+            isTeacher = true;
+            document.getElementById('modal-auth').classList.replace('flex', 'hidden');
+            renderAll();
+          } else {
+            alert('รหัสผ่านไม่ถูกต้อง');
+          }
+        } else if (action === 'close-modal') {
+          document.getElementById(btn.dataset.target).classList.replace('flex', 'hidden');
+        } else if (action === 'open-site-settings') {
+          document.getElementById('input-site-title').value = state.siteTitle;
+          document.getElementById('input-site-subtitle').value = state.siteSubtitle;
+          document.getElementById('modal-site-settings').classList.replace('hidden', 'flex');
+        } else if (action === 'save-site-settings') {
+          state.siteTitle = document.getElementById('input-site-title').value.trim() || state.siteTitle;
+          state.siteSubtitle = document.getElementById('input-site-subtitle').value.trim() || state.siteSubtitle;
+          saveState();
+          document.getElementById('modal-site-settings').classList.replace('flex', 'hidden');
+          renderAll();
+        } else if (action === 'select-class') {
+          state.activeClassId = btn.dataset.id;
+          saveState();
+          renderAll();
+        } else if (action === 'switch-tab') {
+          activeTab = btn.dataset.tab;
+          document.querySelectorAll('.tab-btn').forEach(b => {
+            const isAct = b.dataset.tab === activeTab;
+            b.className = `tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition ${isAct ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`;
+          });
+          document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+          document.getElementById(`tab-${activeTab}`).classList.remove('hidden');
+        } else if (action === 'open-class-modal') {
+          modalMode = btn.dataset.mode;
+          if (modalMode === 'edit' && cls) {
+            document.getElementById('modal-class-title').textContent = 'แก้ไขข้อมูลห้องเรียนและรายวิชา';
+            document.getElementById('cls-name').value = cls.name;
+            document.getElementById('cls-teacher').value = cls.teacher || '';
+            document.getElementById('cls-code').value = cls.code || '';
+            document.getElementById('cls-subject').value = cls.subject || '';
+            document.getElementById('cls-credits').value = cls.credits || '';
+            document.getElementById('cls-hours').value = cls.hours || '';
+            document.getElementById('cls-term').value = cls.term || '';
+            tempModalStudents = [...cls.students];
+            document.getElementById('cls-bulk-text').value = cls.students.map(s => `${s.id}\t${s.name}\t${s.no}`).join('\n');
+          } else {
+            document.getElementById('modal-class-title').textContent = 'เพิ่มห้องเรียนใหม่';
+            ['cls-name', 'cls-teacher', 'cls-code', 'cls-subject', 'cls-credits', 'cls-hours', 'cls-term', 'cls-bulk-text'].forEach(id => document.getElementById(id).value = '');
+            tempModalStudents = [];
+          }
+          renderModalStudentsPreview();
+          document.getElementById('modal-class').classList.replace('hidden', 'flex');
+        } else if (action === 'paste-sample-students') {
+          document.getElementById('cls-bulk-text').value = "66001\tเด็กชายกิตติพงษ์ ใจดี\t1\n66002\tเด็กหญิงมานี มีตา\t2\n66003\tเด็กชายสมชาย รักเรียน\t3";
+        } else if (action === 'parse-bulk-students') {
+          const lines = document.getElementById('cls-bulk-text').value.split('\n').map(l => l.trim()).filter(Boolean);
+          tempModalStudents = lines.map((line, idx) => {
+            const parts = line.split(/\t|,|\s{2,}/).map(p => p.trim()).filter(Boolean);
+            if (parts.length >= 3) return { id: parts[0], name: parts[1], no: parseInt(parts[2]) || (idx + 1) };
+            if (parts.length === 2) return { id: parts[0], name: parts[1], no: idx + 1 };
+            return { id: String(idx + 1).padStart(3, '0'), name: parts[0], no: idx + 1 };
+          });
+          renderModalStudentsPreview();
+        } else if (action === 'sort-modal-students') {
+          const by = btn.dataset.by;
+          tempModalStudents.sort((a, b) => by === 'no' ? a.no - b.no : a.id.localeCompare(b.id));
+          renderModalStudentsPreview();
+        } else if (action === 'save-class') {
+          const name = document.getElementById('cls-name').value.trim();
+          if (!name) return alert('กรุณากรอกชื่อห้องเรียน');
+          if (modalMode === 'edit' && cls) {
+            cls.name = name;
+            cls.teacher = document.getElementById('cls-teacher').value.trim();
+            cls.code = document.getElementById('cls-code').value.trim();
+            cls.subject = document.getElementById('cls-subject').value.trim();
+            cls.credits = document.getElementById('cls-credits').value.trim();
+            cls.hours = document.getElementById('cls-hours').value.trim();
+            cls.term = document.getElementById('cls-term').value.trim();
+            if (tempModalStudents.length > 0) cls.students = tempModalStudents;
+          } else {
+            const newId = 'c_' + Date.now();
+            state.classes.push({
+              id: newId, name,
+              teacher: document.getElementById('cls-teacher').value.trim(),
+              code: document.getElementById('cls-code').value.trim(),
+              subject: document.getElementById('cls-subject').value.trim(),
+              credits: document.getElementById('cls-credits').value.trim(),
+              hours: document.getElementById('cls-hours').value.trim(),
+              term: document.getElementById('cls-term').value.trim(),
+              scheduleDates: [],
+              students: tempModalStudents,
+              attendance: {}, assignments: [], submissions: {}
+            });
+            state.activeClassId = newId;
+          }
+          saveState();
+          document.getElementById('modal-class').classList.replace('flex', 'hidden');
+          renderAll();
+        } else if (action === 'delete-class') {
+          if (state.classes.length <= 1) return alert('ต้องมีอย่างน้อย 1 ห้องเรียน');
+          if (confirm(`ต้องการลบห้อง ${cls.name} ใช่หรือไม่?`)) {
+            state.classes = state.classes.filter(c => c.id !== cls.id);
+            state.activeClassId = state.classes[0].id;
+            saveState();
+            renderAll();
+          }
+        } else if (action === 'mark-all-present') {
+          if (!cls.attendance[state.selectedDate]) cls.attendance[state.selectedDate] = {};
+          cls.students.forEach(s => {
+            cls.attendance[state.selectedDate][s.id] = { status: 'present', note: cls.attendance[state.selectedDate][s.id]?.note || '' };
+          });
+          saveState();
+          renderAll();
+        } else if (action === 'open-schedule-modal') {
+          document.getElementById('sched-start').value = state.selectedDate;
+          document.getElementById('modal-schedule').classList.replace('hidden', 'flex');
+        } else if (action === 'generate-schedule') {
+          const days = Array.from(document.querySelectorAll('.sched-day:checked')).map(cb => parseInt(cb.value));
+          const startStr = document.getElementById('sched-start').value;
+          const weeks = parseInt(document.getElementById('sched-weeks').value) || 18;
+          if (days.length === 0 || !startStr) return alert('กรุณาเลือกวันเรียนและวันที่เริ่มต้น');
+          const dates = [];
+          const start = new Date(startStr);
+          for (let w = 0; w < weeks * 7; w++) {
+            const d = new Date(start);
+            d.setDate(start.getDate() + w);
+            if (days.includes(d.getDay())) dates.push(d.toISOString().split('T')[0]);
+          }
+          cls.scheduleDates = dates;
+          if (dates.length > 0) state.selectedDate = dates[0];
+          saveState();
+          document.getElementById('modal-schedule').classList.replace('flex', 'hidden');
+          renderAll();
+        } else if (action === 'select-sched-date') {
+          state.selectedDate = btn.dataset.date;
+          saveState();
+          renderAll();
+        } else if (action === 'add-assignment') {
+          const title = document.getElementById('new-work-title').value.trim();
+          const maxScore = parseInt(document.getElementById('new-work-max').value) || 10;
+          if (!title) return alert('กรุณากรอกชื่องาน');
+          cls.assignments.push({ id: 'w_' + Date.now(), title, maxScore });
+          document.getElementById('new-work-title').value = '';
+          saveState();
+          renderAll();
+        } else if (action === 'delete-assignment') {
+          cls.assignments = cls.assignments.filter(w => w.id !== btn.dataset.wid);
+          saveState();
+          renderAll();
+        } else if (action === 'add-student') {
+          const no = parseInt(document.getElementById('add-stu-no').value) || (cls.students.length + 1);
+          const id = document.getElementById('add-stu-id').value.trim() || String(no).padStart(3, '0');
+          const name = document.getElementById('add-stu-name').value.trim();
+          if (!name) return alert('กรุณากรอกชื่อ-สกุล');
+          cls.students.push({ id, name, no });
+          cls.students.sort((a, b) => a.no - b.no);
+          ['add-stu-no', 'add-stu-id', 'add-stu-name'].forEach(i => document.getElementById(i).value = '');
+          saveState();
+          renderAll();
+        } else if (action === 'delete-student') {
+          cls.students = cls.students.filter(s => s.id !== btn.dataset.stuid);
+          saveState();
+          renderAll();
+        } else if (action === 'export-csv') {
+          let csv = '\uFEFFเลขที่,รหัส,ชื่อ-สกุล,มา,สาย,ลา,ขาด,ส่งงาน,คะแนนรวม\n';
+          const days = Object.keys(cls.attendance || {});
+          cls.students.forEach(stu => {
+            let p = 0, l = 0, lv = 0, a = 0;
+            days.forEach(d => {
+              const st = cls.attendance[d]?.[stu.id]?.status;
+              if (st === 'present') p++; else if (st === 'late') l++; else if (st === 'sick' || st === 'personal') lv++; else if (st === 'absent') a++;
+            });
+            let sub = 0, sc = 0;
+            (cls.assignments || []).forEach(w => {
+              const s = cls.submissions?.[w.id]?.[stu.id];
+              if (s && (s.status === 'submitted' || s.status === 'late')) sub++;
+              if (s && s.score) sc += Number(s.score);
+            });
+            csv += `${stu.no},"${stu.id}","${stu.name}",${p},${l},${lv},${a},${sub},${sc}\n`;
+          });
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = `รายงาน_${cls.name}.csv`;
+          link.click();
+        } else if (action === 'print-pdf') {
+          window.print();
+        }
+      });
+
+      document.addEventListener('change', (e) => {
+        const el = e.target;
+        const cls = getActiveClass();
+        if (el.id === 'attendance-date') {
+          state.selectedDate = el.value;
+          saveState();
+          renderAll();
+        } else if (el.dataset.action === 'change-att-status') {
+          if (!cls.attendance[state.selectedDate]) cls.attendance[state.selectedDate] = {};
+          const prev = cls.attendance[state.selectedDate][el.dataset.stuid] || {};
+          cls.attendance[state.selectedDate][el.dataset.stuid] = { status: el.value, note: prev.note || '' };
+          saveState();
+          renderSummary(cls);
+        } else if (el.dataset.action === 'change-att-note') {
+          if (!cls.attendance[state.selectedDate]) cls.attendance[state.selectedDate] = {};
+          const prev = cls.attendance[state.selectedDate][el.dataset.stuid] || {};
+          cls.attendance[state.selectedDate][el.dataset.stuid] = { status: prev.status || '', note: el.value };
+          saveState();
+        } else if (el.dataset.action === 'change-work-status' || el.dataset.action === 'change-work-score') {
+          const wid = el.dataset.wid, stuid = el.dataset.stuid;
+          if (!cls.submissions[wid]) cls.submissions[wid] = {};
+          const prev = cls.submissions[wid][stuid] || { status: 'missing', score: '' };
+          if (el.dataset.action === 'change-work-status') prev.status = el.value;
+          else prev.score = el.value;
+          cls.submissions[wid][stuid] = prev;
+          saveState();
+          renderSummary(cls);
+        }
+      });
+
+      function renderModalStudentsPreview() {
+        const box = document.getElementById('modal-students-preview');
+        if (tempModalStudents.length === 0) {
+          box.textContent = 'ยังไม่มีรายชื่อนักเรียน';
+          return;
+        }
+        box.innerHTML = tempModalStudents.map(s => `<div>เลขที่ ${s.no} | ${s.id} | ${s.name}</div>`).join('');
+      }
+
+      renderAll();
+      loadCloudState();
+    });
+  </script>
+</body>
+</html>
